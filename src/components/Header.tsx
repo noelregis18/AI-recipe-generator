@@ -1,15 +1,59 @@
 
 import React from 'react';
-import { Utensils } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuLink } from "@/components/ui/navigation-menu";
+import { Button } from "@/components/ui/button";
+import { useAuth } from '@/lib/auth';
+import LogoutButton from './LogoutButton';
 
 const Header = () => {
+  const { user } = useAuth();
+  
   return (
-    <header className="bg-culinary-peach/30 border-b py-4 sticky top-0 z-10 backdrop-blur-sm">
-      <div className="container">
-        <div className="flex items-center justify-center">
-          <Utensils className="h-6 w-6 text-primary mr-2" />
-          <h1 className="text-xl font-semibold">Culinary Photo Genius</h1>
-        </div>
+    <header className="bg-white shadow-sm py-4 px-6">
+      <div className="container mx-auto flex items-center justify-between">
+        <Link to="/" className="text-xl font-bold text-primary">
+          Culinary Photo Genius
+        </Link>
+        
+        <NavigationMenu>
+          <NavigationMenuList className="flex items-center space-x-4">
+            <NavigationMenuItem>
+              <Link to="/" className="text-sm font-medium hover:text-primary transition-colors">
+                Home
+              </Link>
+            </NavigationMenuItem>
+            
+            {user && (
+              <NavigationMenuItem>
+                <Link to="/recipe" className="text-sm font-medium hover:text-primary transition-colors">
+                  Recipe Generator
+                </Link>
+              </NavigationMenuItem>
+            )}
+            
+            <NavigationMenuItem>
+              <a 
+                href="#contact" 
+                className="text-sm font-medium hover:text-primary transition-colors"
+              >
+                Contact
+              </a>
+            </NavigationMenuItem>
+            
+            {!user ? (
+              <NavigationMenuItem>
+                <Link to="/auth">
+                  <Button variant="default" size="sm">
+                    Sign In
+                  </Button>
+                </Link>
+              </NavigationMenuItem>
+            ) : (
+              <LogoutButton />
+            )}
+          </NavigationMenuList>
+        </NavigationMenu>
       </div>
     </header>
   );

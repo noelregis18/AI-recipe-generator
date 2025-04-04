@@ -29,6 +29,8 @@ serve(async (req) => {
       throw new Error("Missing required fields");
     }
 
+    console.log("Sending email with data:", { name, email, message });
+
     // Send email to Noel
     const emailResponse = await resend.emails.send({
       from: "Culinary Photo Genius <onboarding@resend.dev>",

@@ -42,10 +42,14 @@ const ContactForm = () => {
     }
     
     try {
+      console.log('Sending form data to edge function:', formData);
+      
       // Send the form data to our Supabase Edge Function
-      const { error } = await supabase.functions.invoke('send-email', {
+      const { error, data } = await supabase.functions.invoke('send-email', {
         body: formData
       });
+      
+      console.log('Response from edge function:', { error, data });
       
       if (error) {
         throw new Error(error.message || 'Failed to send message');
@@ -82,6 +86,7 @@ const ContactForm = () => {
               value={formData.name}
               onChange={handleChange}
               disabled={isSubmitting}
+              className="w-full"
             />
           </div>
           
@@ -95,6 +100,7 @@ const ContactForm = () => {
               value={formData.email}
               onChange={handleChange}
               disabled={isSubmitting}
+              className="w-full"
             />
           </div>
           
@@ -108,6 +114,7 @@ const ContactForm = () => {
               value={formData.message}
               onChange={handleChange}
               disabled={isSubmitting}
+              className="w-full resize-none"
             />
           </div>
           
