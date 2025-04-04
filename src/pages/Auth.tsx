@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,7 @@ import { supabase } from '@/integrations/supabase/client';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { useAuth } from '@/lib/auth';
+import { AuthError } from '@supabase/supabase-js';
 
 const Auth = () => {
   const [email, setEmail] = useState('');
@@ -19,10 +20,10 @@ const Auth = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   
-  // If user is already logged in, redirect to home page
-  React.useEffect(() => {
+  // If user is already logged in, redirect to recipe page
+  useEffect(() => {
     if (user) {
-      navigate('/');
+      navigate('/recipe');
     }
   }, [user, navigate]);
 
@@ -36,9 +37,17 @@ const Auth = () => {
         password,
       });
       
-      if (error) throw error;
-      
-      toast.success('Sign up successful! Please check your email to verify your account.');
+      if (error) {
+        if (error.message === 'User already registered') {
+          // If user exists, try to sign in instead
+          toast.info('Account already exists. Attempting to sign in...');
+          await handleSignInWithExistingAccount();
+        } else {
+          throw error;
+        }
+      } else {
+        toast.success('Sign up successful! Please check your email to verify your account.');
+      }
     } catch (error: any) {
       toast.error(error.message || 'Error during sign up.');
       console.error(error);
@@ -47,10 +56,7 @@ const Auth = () => {
     }
   };
 
-  const handleSignIn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsLoading(true);
-    
+  const handleSignInWithExistingAccount = async () => {
     try {
       const { error } = await supabase.auth.signInWithPassword({
         email,
@@ -60,9 +66,40 @@ const Auth = () => {
       if (error) throw error;
       
       toast.success('Sign in successful!');
-      navigate('/');
+      navigate('/recipe');
     } catch (error: any) {
-      toast.error(error.message || 'Error during sign in.');
+      toast.error('Failed to sign in. Please check your credentials.');
+      console.error(error);
+    }
+  };
+
+  const handleSignIn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsLoading(true);
+    
+    try {
+      const { data, error } = await supabase.auth.signInWithPassword({
+        email,
+        password,
+      });
+      
+      if (error) {
+        // Handle specific error types
+        if (error.message.includes('Invalid login credentials')) {
+          toast.error('Invalid email or password. Please try again.');
+        } else {
+          throw error;
+        }
+      } else {
+        toast.success('Sign in successful!');
+        navigate('/recipe');
+      }
+    } catch (error: any) {
+      const errorMessage = error instanceof AuthError 
+        ? `Authentication error: ${error.message}` 
+        : 'Error during sign in.';
+      
+      toast.error(errorMessage);
       console.error(error);
     } finally {
       setIsLoading(false);
@@ -110,12 +147,17 @@ const Auth = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      autoComplete="current-password"
                     />
                   </div>
                   
                   <Button type="submit" className="w-full" disabled={isLoading}>
                     {isLoading ? 'Signing in...' : 'Sign In'}
                   </Button>
+
+                  <p className="text-sm text-center text-gray-500 mt-4">
+                    Forgot your password? Contact support at <a href="mailto:noel.regis04@gmail.com" className="text-primary">noel.regis04@gmail.com</a>
+                  </p>
                 </form>
               </TabsContent>
               
@@ -141,7 +183,10 @@ const Auth = () => {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      autoComplete="new-password"
+                      minLength={6}
                     />
+                    <p className="text-xs text-gray-500">Password must be at least 6 characters</p>
                   </div>
                   
                   <Button type="submit" className="w-full" disabled={isLoading}>

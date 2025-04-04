@@ -1,24 +1,23 @@
-
-import React, { useState } from 'react';
+import React from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import ImageUpload from '@/components/ImageUpload';
-import RecipeCard, { Recipe } from '@/components/RecipeCard';
-import RecipeDetail from '@/components/RecipeDetail';
-import LoadingIndicator from '@/components/LoadingIndicator';
 import { Button } from '@/components/ui/button';
-import { analyzeImageAndGetRecipes } from '@/services/openaiService';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import type { Recipe as RecipeType } from '@/types/recipe';
+import RecipeDetail from '@/components/RecipeDetail';
+import ImageUpload from '@/components/ImageUpload';
+import LoadingIndicator from '@/components/LoadingIndicator';
 import { toast } from 'sonner';
+import { useState } from 'react';
 
 const Recipe = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [recipes, setRecipes] = useState<Recipe[]>([]);
-  const [selectedRecipe, setSelectedRecipe] = useState<Recipe | null>(null);
+  const [recipes, setRecipes] = useState<RecipeType[]>([]);
+  const [selectedRecipe, setSelectedRecipe] = useState<RecipeType | null>(null);
   
   const handleImageSelected = (file: File) => {
     setSelectedImage(file);
-    // Reset any existing recipes when a new image is selected
     setRecipes([]);
     setSelectedRecipe(null);
   };
@@ -41,9 +40,8 @@ const Recipe = () => {
     }
   };
   
-  const handleSelectRecipe = (recipe: Recipe) => {
+  const handleSelectRecipe = (recipe: RecipeType) => {
     setSelectedRecipe(recipe);
-    // Scroll to the top when a recipe is selected
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
   

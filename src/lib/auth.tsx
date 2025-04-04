@@ -1,7 +1,8 @@
 
 import React, { createContext, useState, useEffect, useContext } from 'react';
-import { Session, User } from '@supabase/supabase-js';
+import { Session, User, AuthError } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
+import { toast } from 'sonner';
 
 interface AuthContextProps {
   user: User | null;
@@ -33,12 +34,21 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         if (event === 'SIGNED_OUT') {
           setUser(null);
           setSession(null);
+          toast.info('You have been signed out');
+        } else if (event === 'SIGNED_IN') {
+          toast.success('Successfully signed in');
         }
       }
     );
 
     // THEN check for existing session
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        console.error('Error getting session:', error);
+        setIsLoading(false);
+        return;
+      }
+      
       setSession(session);
       setUser(session?.user ?? null);
       setIsLoading(false);
@@ -48,7 +58,18 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const signOut = async () => {
-    await supabase.auth.signOut();
+    try {
+      const { error } = await supabase.auth.signOut();
+      if (error) throw error;
+    } catch (error) {
+      if (error instanceof AuthError) {
+        console.error('Error signing out:', error.message);
+        toast.error(`Error signing out: ${error.message}`);
+      } else {
+        console.error('Unknown error during sign out:', error);
+        toast.error('An unknown error occurred during sign out');
+      }
+    }
   };
 
   return (
