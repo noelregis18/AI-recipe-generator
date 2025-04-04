@@ -85,7 +85,14 @@ const Footer = () => {
           
           <div className="flex items-center gap-2 md:col-span-2">
             <MapPin className="h-5 w-5 text-primary flex-shrink-0" />
-            <span>Asansol, West Bengal, India</span>
+            <a 
+              href="https://maps.google.com/?q=Asansol,West+Bengal,India" 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="hover:text-primary transition-colors"
+            >
+              Asansol, West Bengal, India
+            </a>
           </div>
         </div>
         
