@@ -1,55 +1,47 @@
-
 import { Recipe } from '@/components/RecipeCard';
-
-// Check if we have a valid OpenAI key
-const hasOpenAIKey = true; // For now let's assume we have a key
-const OPENAI_API_KEY = 'dummy-key'; // This would be replaced with a real key
+import { supabase } from '@/integrations/supabase/client';
 
 // Function to analyze an image and get recipe suggestions
 export const analyzeImageAndGetRecipes = async (imageFile: File): Promise<Recipe[]> => {
   try {
-    if (!hasOpenAIKey) {
-      console.error('No OpenAI API key provided');
-      return getMockRecipes();
-    }
+    // Convert the image file to a base64 string
+    const base64Image = await fileToBase64(imageFile);
     
-    // For now, let's return mock data since we need an actual API key to call OpenAI
-    // In a real app, here's where we'd make the API call to OpenAI
-    /*
-    const formData = new FormData();
-    formData.append('image', imageFile);
-    formData.append('prompt', 'Analyze this image and suggest recipes that can be made with these ingredients');
-    
-    const response = await fetch('https://api.openai.com/v1/chat/completions', {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${OPENAI_API_KEY}`,
-      },
-      body: formData
+    // Call the Supabase Edge Function with the base64 image
+    const { data, error } = await supabase.functions.invoke('analyze-image', {
+      body: { imageBase64: base64Image },
     });
     
-    const data = await response.json();
-    return parseOpenAIResponse(data);
-    */
+    if (error) {
+      console.error('Error calling analyze-image function:', error);
+      throw error;
+    }
     
-    // For the demo, return mock recipes after a small delay to simulate API call
-    await new Promise(resolve => setTimeout(resolve, 1500));
-    return getMockRecipes();
+    // Extract the recipes from the response
+    const { recipes } = data as { recipes: Recipe[] };
+    return recipes;
   } catch (error) {
     console.error('Error analyzing image:', error);
-    throw error;
+    // If there's an error, return some mock recipes as a fallback
+    return getMockRecipes();
   }
+};
+
+// Helper function to convert a file to a base64 string
+const fileToBase64 = (file: File): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.readAsDataURL(file);
+    reader.onload = () => resolve(reader.result as string);
+    reader.onerror = error => reject(error);
+  });
 };
 
 // Function to get recipe details
 export const getRecipeDetails = async (recipeId: string): Promise<Recipe | null> => {
   try {
-    if (!hasOpenAIKey) {
-      console.error('No OpenAI API key provided');
-      return null;
-    }
-    
-    // For now, let's return a mock recipe
+    // For now, find the recipe in the list of generated recipes
+    // In a real app, this might make another API call or fetch from a database
     const mockRecipes = getMockRecipes();
     const recipe = mockRecipes.find(r => r.id === recipeId);
     
