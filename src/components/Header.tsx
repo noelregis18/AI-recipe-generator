@@ -5,6 +5,7 @@ import { NavigationMenu, NavigationMenuList, NavigationMenuItem, NavigationMenuL
 import { Button } from "@/components/ui/button";
 import { useAuth } from '@/lib/auth';
 import LogoutButton from './LogoutButton';
+import { Heart } from 'lucide-react';
 
 const Header = () => {
   const { user } = useAuth();
@@ -25,11 +26,19 @@ const Header = () => {
             </NavigationMenuItem>
             
             {user && (
-              <NavigationMenuItem>
-                <Link to="/recipe" className="text-sm font-medium hover:text-primary transition-colors">
-                  Recipe Generator
-                </Link>
-              </NavigationMenuItem>
+              <>
+                <NavigationMenuItem>
+                  <Link to="/recipe" className="text-sm font-medium hover:text-primary transition-colors">
+                    Recipe Generator
+                  </Link>
+                </NavigationMenuItem>
+                
+                <NavigationMenuItem>
+                  <Link to="/saved" className="text-sm font-medium hover:text-primary transition-colors flex items-center">
+                    <Heart className="h-4 w-4 mr-1" /> Saved
+                  </Link>
+                </NavigationMenuItem>
+              </>
             )}
             
             <NavigationMenuItem>
