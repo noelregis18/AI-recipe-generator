@@ -2,154 +2,28 @@
 import React from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
-import { Button } from '@/components/ui/button';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import RecipeDetail from '@/components/RecipeDetail';
-import ImageUpload from '@/components/ImageUpload';
 import LoadingIndicator from '@/components/LoadingIndicator';
-import { toast } from 'sonner';
-import { useState, useEffect } from 'react';
-import RecipeCard from '@/components/RecipeCard';
-import { analyzeImageAndGetRecipes } from '@/services/openaiService';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuth } from '@/lib/auth';
-import { Recipe as RecipeType } from '@/types/recipe';
-
-// Define a type for the data structure we expect from the saved_recipes table
-interface SavedRecipeRow {
-  recipe_data: RecipeType;
-  recipe_id: string;
-  id: string;
-  user_id: string;
-  created_at: string;
-}
+import RecipeImageUpload from '@/components/RecipeImageUpload';
+import RecipeList from '@/components/RecipeList';
+import RecipeError from '@/components/RecipeError';
+import { useRecipeManagement } from '@/hooks/useRecipeManagement';
 
 const Recipe = () => {
-  const [selectedImage, setSelectedImage] = useState<File | null>(null);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [recipes, setRecipes] = useState<RecipeType[]>([]);
-  const [selectedRecipe, setSelectedRecipe] = useState<RecipeType | null>(null);
-  const [savedRecipes, setSavedRecipes] = useState<string[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const { user } = useAuth();
-  
-  useEffect(() => {
-    const fetchSavedRecipes = async () => {
-      if (!user) return;
-      
-      try {
-        // Use explicit type casting to handle the fact that saved_recipes isn't in the type definition
-        const { data, error } = await supabase
-          .from('saved_recipes' as any)
-          .select('recipe_id')
-          .eq('user_id', user.id);
-          
-        if (error) throw error;
-        
-        // Type assertion to tell TypeScript that data is an array with recipe_id
-        const typedData = data as unknown as Pick<SavedRecipeRow, 'recipe_id'>[];
-        const savedIds = typedData.map(item => item.recipe_id);
-        setSavedRecipes(savedIds);
-      } catch (error) {
-        console.error('Error fetching saved recipes:', error);
-      }
-    };
-    
-    fetchSavedRecipes();
-  }, [user]);
-  
-  const handleImageSelected = (file: File) => {
-    setSelectedImage(file);
-    setRecipes([]);
-    setSelectedRecipe(null);
-    setError(null);
-  };
-  
-  const handleGenerateRecipes = async () => {
-    if (!selectedImage) {
-      toast.error('Please upload an image first');
-      return;
-    }
-    
-    try {
-      setIsGenerating(true);
-      setError(null);
-      const generatedRecipes = await analyzeImageAndGetRecipes(selectedImage);
-      
-      if (generatedRecipes.length === 0) {
-        setError('No recipes could be generated. Please try with a different image.');
-        toast.error('Failed to generate recipes');
-      } else {
-        setRecipes(generatedRecipes);
-        if (generatedRecipes[0].title.includes('Error') || generatedRecipes[0].title.includes('Failed')) {
-          toast.warning('We had some trouble analyzing your image. Try taking a clearer photo.');
-        } else {
-          toast.success('Recipes generated successfully!');
-        }
-      }
-    } catch (error) {
-      console.error('Error generating recipes:', error);
-      setError('An error occurred while generating recipes. Please try again.');
-      toast.error('Failed to generate recipes. Please try again.');
-    } finally {
-      setIsGenerating(false);
-    }
-  };
-  
-  const handleSelectRecipe = (recipe: RecipeType) => {
-    setSelectedRecipe(recipe);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-  
-  const handleBackToRecipes = () => {
-    setSelectedRecipe(null);
-  };
-  
-  const handleSaveRecipe = async (recipeId: string) => {
-    if (!user) {
-      toast.error('Please sign in to save recipes');
-      return;
-    }
-    
-    try {
-      // Check if recipe is already saved
-      const isSaved = savedRecipes.includes(recipeId);
-      
-      if (isSaved) {
-        // Unsave recipe - use type assertion to handle the missing types
-        const { error } = await supabase
-          .from('saved_recipes' as any)
-          .delete()
-          .eq('user_id', user.id)
-          .eq('recipe_id', recipeId);
-          
-        if (error) throw error;
-        
-        setSavedRecipes(savedRecipes.filter(id => id !== recipeId));
-        toast.success('Recipe removed from saved items');
-      } else {
-        // Save recipe - use type assertion for the table name
-        const recipeToSave = recipes.find(r => r.id === recipeId);
-        if (!recipeToSave) return;
-        
-        const { error } = await supabase
-          .from('saved_recipes' as any)
-          .insert({ 
-            user_id: user.id, 
-            recipe_id: recipeId, 
-            recipe_data: recipeToSave 
-          } as any);
-          
-        if (error) throw error;
-        
-        setSavedRecipes([...savedRecipes, recipeId]);
-        toast.success('Recipe saved successfully');
-      }
-    } catch (error) {
-      console.error('Error saving recipe:', error);
-      toast.error('Failed to save recipe');
-    }
-  };
+  const {
+    selectedImage,
+    isGenerating,
+    recipes,
+    selectedRecipe,
+    savedRecipes,
+    error,
+    handleImageSelected,
+    handleGenerateRecipes,
+    handleSelectRecipe,
+    handleBackToRecipes,
+    handleSaveRecipe,
+    resetError
+  } = useRecipeManagement();
   
   return (
     <div className="min-h-screen flex flex-col bg-gradient-to-b from-culinary-peach/30 to-white">
@@ -175,25 +49,12 @@ const Recipe = () => {
                 onToggleSave={() => handleSaveRecipe(selectedRecipe.id)}
               />
             ) : (
-              <div className="max-w-md mx-auto bg-white p-8 rounded-xl shadow-lg border border-gray-100">
-                <ImageUpload 
-                  onImageSelected={handleImageSelected} 
-                  isLoading={isGenerating}
-                />
-                
-                {selectedImage && (
-                  <div className="mt-6 text-center">
-                    <Button 
-                      onClick={handleGenerateRecipes} 
-                      disabled={isGenerating}
-                      size="lg"
-                      className="w-full bg-gradient-to-r from-primary to-orange-400 hover:from-primary/90 hover:to-orange-500 transition-all shadow-md"
-                    >
-                      Generate Recipes
-                    </Button>
-                  </div>
-                )}
-              </div>
+              <RecipeImageUpload
+                selectedImage={selectedImage}
+                isGenerating={isGenerating}
+                onImageSelected={handleImageSelected}
+                onGenerateRecipes={handleGenerateRecipes}
+              />
             )}
             
             {isGenerating && (
@@ -203,35 +64,19 @@ const Recipe = () => {
             )}
 
             {error && !isGenerating && (
-              <div className="mt-8 p-4 text-center bg-red-50 border border-red-200 rounded-lg">
-                <p className="text-red-600">{error}</p>
-                <Button 
-                  variant="outline"
-                  className="mt-2"
-                  onClick={() => setError(null)}
-                >
-                  Try Again
-                </Button>
-              </div>
+              <RecipeError 
+                errorMessage={error} 
+                onReset={resetError}
+              />
             )}
             
             {!isGenerating && recipes.length > 0 && !selectedRecipe && (
-              <div className="mt-16">
-                <h2 className="text-2xl font-semibold mb-8 text-center">
-                  Recipe Suggestions
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-                  {recipes.map((recipe) => (
-                    <RecipeCard
-                      key={recipe.id}
-                      recipe={recipe}
-                      onSelect={handleSelectRecipe}
-                      isSaved={savedRecipes.includes(recipe.id)}
-                      onToggleSave={() => handleSaveRecipe(recipe.id)}
-                    />
-                  ))}
-                </div>
-              </div>
+              <RecipeList
+                recipes={recipes}
+                savedRecipes={savedRecipes}
+                onSelectRecipe={handleSelectRecipe}
+                onToggleSave={handleSaveRecipe}
+              />
             )}
           </section>
         </div>
