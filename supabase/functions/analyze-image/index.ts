@@ -112,7 +112,7 @@ serve(async (req) => {
     const foodImages = [
       'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',
       'https://images.unsplash.com/photo-1563379926898-05f4575a45d8',
-      'https://images.unsplash.com/photo-1510693206972-df098062cb71'
+      'https://images.unsplash.com/photo-1505576399279-565b52d4ac71'
     ];
 
     recipes = recipes.map((recipe, index) => ({

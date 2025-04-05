@@ -30,6 +30,7 @@ const Recipe = () => {
   const [recipes, setRecipes] = useState<RecipeType[]>([]);
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeType | null>(null);
   const [savedRecipes, setSavedRecipes] = useState<string[]>([]);
+  const [error, setError] = useState<string | null>(null);
   const { user } = useAuth();
   
   useEffect(() => {
@@ -61,6 +62,7 @@ const Recipe = () => {
     setSelectedImage(file);
     setRecipes([]);
     setSelectedRecipe(null);
+    setError(null);
   };
   
   const handleGenerateRecipes = async () => {
@@ -71,10 +73,23 @@ const Recipe = () => {
     
     try {
       setIsGenerating(true);
+      setError(null);
       const generatedRecipes = await analyzeImageAndGetRecipes(selectedImage);
-      setRecipes(generatedRecipes);
+      
+      if (generatedRecipes.length === 0) {
+        setError('No recipes could be generated. Please try with a different image.');
+        toast.error('Failed to generate recipes');
+      } else {
+        setRecipes(generatedRecipes);
+        if (generatedRecipes[0].title.includes('Error') || generatedRecipes[0].title.includes('Failed')) {
+          toast.warning('We had some trouble analyzing your image. Try taking a clearer photo.');
+        } else {
+          toast.success('Recipes generated successfully!');
+        }
+      }
     } catch (error) {
       console.error('Error generating recipes:', error);
+      setError('An error occurred while generating recipes. Please try again.');
       toast.error('Failed to generate recipes. Please try again.');
     } finally {
       setIsGenerating(false);
@@ -184,6 +199,19 @@ const Recipe = () => {
             {isGenerating && (
               <div className="mt-10">
                 <LoadingIndicator message="Analyzing ingredients and generating recipe ideas..." />
+              </div>
+            )}
+
+            {error && !isGenerating && (
+              <div className="mt-8 p-4 text-center bg-red-50 border border-red-200 rounded-lg">
+                <p className="text-red-600">{error}</p>
+                <Button 
+                  variant="outline"
+                  className="mt-2"
+                  onClick={() => setError(null)}
+                >
+                  Try Again
+                </Button>
               </div>
             )}
             
