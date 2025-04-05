@@ -1,141 +1,89 @@
-import { Recipe } from '@/components/RecipeCard';
-import { supabase } from '@/integrations/supabase/client';
 
-// Function to analyze an image and get recipe suggestions
-export const analyzeImageAndGetRecipes = async (imageFile: File): Promise<Recipe[]> => {
-  try {
-    // Convert the image file to a base64 string
-    const base64Image = await fileToBase64(imageFile);
-    
-    // Call the Supabase Edge Function with the base64 image
-    const { data, error } = await supabase.functions.invoke('analyze-image', {
-      body: { imageBase64: base64Image },
-    });
-    
-    if (error) {
-      console.error('Error calling analyze-image function:', error);
-      throw error;
-    }
-    
-    // Extract the recipes from the response
-    const { recipes } = data as { recipes: Recipe[] };
-    return recipes;
-  } catch (error) {
-    console.error('Error analyzing image:', error);
-    // If there's an error, return some mock recipes as a fallback
-    return getMockRecipes();
-  }
-};
+import { Recipe } from '@/types/recipe';
 
-// Helper function to convert a file to a base64 string
-const fileToBase64 = (file: File): Promise<string> => {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.readAsDataURL(file);
-    reader.onload = () => resolve(reader.result as string);
-    reader.onerror = error => reject(error);
-  });
-};
-
-// Function to get recipe details
-export const getRecipeDetails = async (recipeId: string): Promise<Recipe | null> => {
-  try {
-    // For now, find the recipe in the list of generated recipes
-    // In a real app, this might make another API call or fetch from a database
-    const mockRecipes = getMockRecipes();
-    const recipe = mockRecipes.find(r => r.id === recipeId);
-    
-    // Simulate API delay
-    await new Promise(resolve => setTimeout(resolve, 800));
-    
-    return recipe || null;
-  } catch (error) {
-    console.error('Error getting recipe details:', error);
-    throw error;
-  }
-};
-
-// Helper function to return mock recipes for development
-const getMockRecipes = (): Recipe[] => {
+// Function to simulate AI analysis and recipe generation
+export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> => {
+  // Simulating API call delay
+  await new Promise(resolve => setTimeout(resolve, 2000));
+  
+  // For demo purposes, we're returning mock recipes
   return [
     {
-      id: '1',
-      title: 'Vegetable Stir Fry with Rice',
-      description: 'A quick and healthy stir fry made with assorted vegetables and served with steamed rice.',
-      cookTime: '25 mins',
+      id: 'recipe-1',
+      title: 'Pasta Primavera',
+      description: 'A light and fresh pasta dish with seasonal vegetables.',
+      cookTime: '25 minutes',
       difficulty: 'Easy',
       ingredients: [
-        '2 cups mixed vegetables (bell peppers, carrots, broccoli, etc.)',
-        '2 cloves garlic, minced',
-        '1 tbsp ginger, grated',
-        '2 tbsp soy sauce',
-        '1 tbsp vegetable oil',
-        '1 tsp sesame oil',
-        '2 cups cooked rice',
-        'Salt and pepper to taste'
-      ],
-      instructions: [
-        'Heat vegetable oil in a large wok or skillet over medium-high heat.',
-        'Add minced garlic and grated ginger, sauté for 30 seconds until fragrant.',
-        'Add vegetables and stir fry for 5-7 minutes until crisp-tender.',
-        'Pour in soy sauce and season with salt and pepper.',
-        'Drizzle with sesame oil and toss to combine.',
-        'Serve hot over steamed rice.'
-      ],
-      imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c'
-    },
-    {
-      id: '2',
-      title: 'Simple Pasta Primavera',
-      description: 'A light and flavorful pasta dish packed with fresh seasonal vegetables.',
-      cookTime: '20 mins',
-      difficulty: 'Easy',
-      ingredients: [
-        '8 oz pasta (any shape)',
-        '2 cups mixed vegetables (zucchini, cherry tomatoes, spinach)',
+        '8 oz pasta',
+        '2 cups mixed vegetables (bell peppers, zucchini, broccoli)',
+        '3 cloves garlic, minced',
         '2 tbsp olive oil',
-        '2 cloves garlic, minced',
-        '1/4 cup grated Parmesan cheese',
-        'Fresh basil leaves',
-        'Salt and pepper to taste',
-        'Red pepper flakes (optional)'
-      ],
-      instructions: [
-        'Cook pasta according to package instructions until al dente. Reserve 1/2 cup pasta water before draining.',
-        'In a large skillet, heat olive oil over medium heat.',
-        'Add minced garlic and sauté for 30 seconds.',
-        'Add vegetables and cook for 3-5 minutes until tender but still crisp.',
-        'Add drained pasta to the skillet along with a splash of pasta water.',
-        'Toss with Parmesan cheese, salt, and pepper.',
-        'Garnish with fresh basil leaves and red pepper flakes if desired.'
-      ],
-      imageUrl: 'https://images.unsplash.com/photo-1563379926898-05f4575a45d8'
-    },
-    {
-      id: '3',
-      title: 'Quick Vegetable Omelette',
-      description: 'A protein-packed breakfast or light dinner option using eggs and available vegetables.',
-      cookTime: '15 mins',
-      difficulty: 'Easy',
-      ingredients: [
-        '3 large eggs',
-        '1/4 cup milk',
-        '1/2 cup diced vegetables (bell peppers, onions, tomatoes)',
-        '1/4 cup shredded cheese (cheddar or mozzarella)',
-        '1 tbsp butter or oil',
-        'Fresh herbs (chives, parsley)',
+        '1/4 cup grated parmesan cheese',
         'Salt and pepper to taste'
       ],
       instructions: [
-        'In a bowl, whisk together eggs, milk, salt, and pepper until well combined.',
-        'Heat butter or oil in a non-stick skillet over medium heat.',
-        'Add diced vegetables and cook for 2-3 minutes until slightly softened.',
-        'Pour the egg mixture over the vegetables and cook for 2 minutes without stirring.',
-        'When the edges start to set, sprinkle shredded cheese on top.',
-        'Cook for another 1-2 minutes until eggs are set but still moist on top.',
-        'Fold the omelette in half, garnish with fresh herbs, and serve immediately.'
+        'Cook pasta according to package instructions.',
+        'In a large skillet, heat olive oil over medium heat.',
+        'Add garlic and sauté until fragrant, about 30 seconds.',
+        'Add vegetables and cook until tender-crisp, about 5 minutes.',
+        'Drain pasta and add to the skillet with vegetables.',
+        'Toss with parmesan cheese, salt, and pepper.',
+        'Serve immediately.'
       ],
-      imageUrl: 'https://images.unsplash.com/photo-1510693206972-df098062cb71'
+      imageUrl: 'https://images.unsplash.com/photo-1563379926898-05f4575a45d8?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8NXx8cGFzdGElMjBwcmltYXZlcmF8ZW58MHx8MHx8&auto=format&fit=crop&w=500&q=60'
+    },
+    {
+      id: 'recipe-2',
+      title: 'Roasted Vegetable Quinoa Bowl',
+      description: 'A nutritious and colorful quinoa bowl with roasted vegetables.',
+      cookTime: '35 minutes',
+      difficulty: 'Medium',
+      ingredients: [
+        '1 cup quinoa, rinsed',
+        '2 cups vegetable broth',
+        '1 sweet potato, diced',
+        '1 red bell pepper, chopped',
+        '1 zucchini, chopped',
+        '1 red onion, chopped',
+        '2 tbsp olive oil',
+        '1 tsp cumin',
+        '1 tsp paprika',
+        'Salt and pepper to taste'
+      ],
+      instructions: [
+        'Preheat oven to 425°F (220°C).',
+        'In a bowl, toss vegetables with olive oil, cumin, paprika, salt, and pepper.',
+        'Spread vegetables on a baking sheet and roast for 25 minutes.',
+        'Meanwhile, cook quinoa in vegetable broth according to package instructions.',
+        'Combine roasted vegetables with cooked quinoa.',
+        'Serve warm.'
+      ],
+      imageUrl: 'https://images.unsplash.com/photo-1505576399279-565b52d4ac71?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8Mnx8cXVpbm9hJTIwYm93bHxlbnwwfHwwfHw%3D&auto=format&fit=crop&w=500&q=60'
+    },
+    {
+      id: 'recipe-3',
+      title: 'Simple Garden Salad',
+      description: 'A refreshing salad with fresh garden vegetables.',
+      cookTime: '10 minutes',
+      difficulty: 'Easy',
+      ingredients: [
+        '4 cups mixed greens',
+        '1 cucumber, sliced',
+        '1 cup cherry tomatoes, halved',
+        '1/4 red onion, thinly sliced',
+        '1/4 cup olive oil',
+        '2 tbsp balsamic vinegar',
+        '1 tsp honey',
+        'Salt and pepper to taste'
+      ],
+      instructions: [
+        'In a large bowl, combine mixed greens, cucumber, cherry tomatoes, and red onion.',
+        'In a small bowl, whisk together olive oil, balsamic vinegar, honey, salt, and pepper.',
+        'Drizzle dressing over salad and toss to coat.',
+        'Serve immediately.'
+      ],
+      imageUrl: 'https://images.unsplash.com/photo-1540420773420-3366772f4999?ixlib=rb-4.0.3&ixid=MnwxMjA3fDB8MHxzZWFyY2h8M3x8Z2FyZGVuJTIwc2FsYWR8ZW58MHx8MHx8&auto=format&fit=crop&w=500&q=60'
     }
   ];
 };

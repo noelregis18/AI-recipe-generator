@@ -4,7 +4,7 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import type { Recipe as RecipeType } from '@/types/recipe';
+import { Recipe as RecipeType } from '@/types/recipe';
 import RecipeDetail from '@/components/RecipeDetail';
 import ImageUpload from '@/components/ImageUpload';
 import LoadingIndicator from '@/components/LoadingIndicator';
@@ -102,9 +102,16 @@ const Recipe = () => {
         toast.success('Recipe removed from saved items');
       } else {
         // Save recipe
+        const recipeToSave = recipes.find(r => r.id === recipeId);
+        if (!recipeToSave) return;
+        
         const { error } = await supabase
           .from('saved_recipes')
-          .insert({ user_id: user.id, recipe_id: recipeId, recipe_data: recipes.find(r => r.id === recipeId) });
+          .insert({ 
+            user_id: user.id, 
+            recipe_id: recipeId, 
+            recipe_data: recipeToSave 
+          });
           
         if (error) throw error;
         

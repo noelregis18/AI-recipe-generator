@@ -31,7 +31,7 @@ const SavedRecipes = () => {
           
         if (error) throw error;
         
-        setSavedRecipes(data.map(item => item.recipe_data));
+        setSavedRecipes(data.map(item => item.recipe_data as RecipeType));
       } catch (error) {
         console.error('Error fetching saved recipes:', error);
         toast.error('Failed to fetch saved recipes');
