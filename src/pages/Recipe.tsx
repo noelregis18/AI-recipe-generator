@@ -1,3 +1,4 @@
+
 import React from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -9,6 +10,8 @@ import ImageUpload from '@/components/ImageUpload';
 import LoadingIndicator from '@/components/LoadingIndicator';
 import { toast } from 'sonner';
 import { useState } from 'react';
+import RecipeCard from '@/components/RecipeCard';
+import { analyzeImageAndGetRecipes } from '@/services/openaiService';
 
 const Recipe = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
