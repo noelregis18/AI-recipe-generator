@@ -12,6 +12,15 @@ import LoadingIndicator from '@/components/LoadingIndicator';
 import { toast } from 'sonner';
 import { Heart } from 'lucide-react';
 
+// Define a type for the data structure we expect from the saved_recipes table
+interface SavedRecipeRow {
+  recipe_data: RecipeType;
+  recipe_id: string;
+  id: string;
+  user_id: string;
+  created_at: string;
+}
+
 const SavedRecipes = () => {
   const [savedRecipes, setSavedRecipes] = useState<RecipeType[]>([]);
   const [selectedRecipe, setSelectedRecipe] = useState<RecipeType | null>(null);
@@ -24,7 +33,7 @@ const SavedRecipes = () => {
       
       try {
         setIsLoading(true);
-        // Use type assertion to handle the missing table in the TypeScript definitions
+        // Use type assertion with our custom interface to handle the missing table in TypeScript definitions
         const { data, error } = await supabase
           .from('saved_recipes' as any)
           .select('recipe_data')
@@ -32,7 +41,9 @@ const SavedRecipes = () => {
           
         if (error) throw error;
         
-        setSavedRecipes(data.map(item => item.recipe_data as RecipeType));
+        // Type assertion to tell TypeScript that data is an array of SavedRecipeRow
+        const typedData = data as unknown as Pick<SavedRecipeRow, 'recipe_data'>[];
+        setSavedRecipes(typedData.map(item => item.recipe_data));
       } catch (error) {
         console.error('Error fetching saved recipes:', error);
         toast.error('Failed to fetch saved recipes');

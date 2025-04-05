@@ -15,6 +15,15 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
 import { Recipe as RecipeType } from '@/types/recipe';
 
+// Define a type for the data structure we expect from the saved_recipes table
+interface SavedRecipeRow {
+  recipe_data: RecipeType;
+  recipe_id: string;
+  id: string;
+  user_id: string;
+  created_at: string;
+}
+
 const Recipe = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
@@ -30,13 +39,15 @@ const Recipe = () => {
       try {
         // Use explicit type casting to handle the fact that saved_recipes isn't in the type definition
         const { data, error } = await supabase
-          .from('saved_recipes')
+          .from('saved_recipes' as any)
           .select('recipe_id')
           .eq('user_id', user.id);
           
         if (error) throw error;
         
-        const savedIds = data.map(item => item.recipe_id as string);
+        // Type assertion to tell TypeScript that data is an array with recipe_id
+        const typedData = data as unknown as Pick<SavedRecipeRow, 'recipe_id'>[];
+        const savedIds = typedData.map(item => item.recipe_id);
         setSavedRecipes(savedIds);
       } catch (error) {
         console.error('Error fetching saved recipes:', error);
