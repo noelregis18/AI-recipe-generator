@@ -4,7 +4,6 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Recipe as RecipeType } from '@/types/recipe';
 import RecipeDetail from '@/components/RecipeDetail';
 import ImageUpload from '@/components/ImageUpload';
 import LoadingIndicator from '@/components/LoadingIndicator';
@@ -14,6 +13,7 @@ import RecipeCard from '@/components/RecipeCard';
 import { analyzeImageAndGetRecipes } from '@/services/openaiService';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/lib/auth';
+import { Recipe as RecipeType } from '@/types/recipe';
 
 const Recipe = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
@@ -28,6 +28,7 @@ const Recipe = () => {
       if (!user) return;
       
       try {
+        // Use explicit type casting to handle the fact that saved_recipes isn't in the type definition
         const { data, error } = await supabase
           .from('saved_recipes')
           .select('recipe_id')
@@ -35,7 +36,7 @@ const Recipe = () => {
           
         if (error) throw error;
         
-        const savedIds = data.map(item => item.recipe_id);
+        const savedIds = data.map(item => item.recipe_id as string);
         setSavedRecipes(savedIds);
       } catch (error) {
         console.error('Error fetching saved recipes:', error);
@@ -89,9 +90,9 @@ const Recipe = () => {
       const isSaved = savedRecipes.includes(recipeId);
       
       if (isSaved) {
-        // Unsave recipe
+        // Unsave recipe - use type assertion to handle the missing types
         const { error } = await supabase
-          .from('saved_recipes')
+          .from('saved_recipes' as any)
           .delete()
           .eq('user_id', user.id)
           .eq('recipe_id', recipeId);
@@ -101,17 +102,17 @@ const Recipe = () => {
         setSavedRecipes(savedRecipes.filter(id => id !== recipeId));
         toast.success('Recipe removed from saved items');
       } else {
-        // Save recipe
+        // Save recipe - use type assertion for the table name
         const recipeToSave = recipes.find(r => r.id === recipeId);
         if (!recipeToSave) return;
         
         const { error } = await supabase
-          .from('saved_recipes')
+          .from('saved_recipes' as any)
           .insert({ 
             user_id: user.id, 
             recipe_id: recipeId, 
             recipe_data: recipeToSave 
-          });
+          } as any);
           
         if (error) throw error;
         

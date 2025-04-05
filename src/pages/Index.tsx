@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import ImageUpload from '@/components/ImageUpload';
-import RecipeCard, { Recipe } from '@/components/RecipeCard';
+import RecipeCard from '@/components/RecipeCard';
 import RecipeDetail from '@/components/RecipeDetail';
 import ContactForm from '@/components/ContactForm';
 import LoadingIndicator from '@/components/LoadingIndicator';
@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { analyzeImageAndGetRecipes } from '@/services/openaiService';
 import { toast } from 'sonner';
 import { Separator } from '@/components/ui/separator';
+import { Recipe } from '@/types/recipe';
 
 const Index = () => {
   const [selectedImage, setSelectedImage] = useState<File | null>(null);

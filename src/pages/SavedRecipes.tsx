@@ -24,8 +24,9 @@ const SavedRecipes = () => {
       
       try {
         setIsLoading(true);
+        // Use type assertion to handle the missing table in the TypeScript definitions
         const { data, error } = await supabase
-          .from('saved_recipes')
+          .from('saved_recipes' as any)
           .select('recipe_data')
           .eq('user_id', user.id);
           
@@ -56,8 +57,9 @@ const SavedRecipes = () => {
     if (!user) return;
     
     try {
+      // Use type assertion to handle the table not being in TypeScript definitions
       const { error } = await supabase
-        .from('saved_recipes')
+        .from('saved_recipes' as any)
         .delete()
         .eq('user_id', user.id)
         .eq('recipe_id', recipeId);
