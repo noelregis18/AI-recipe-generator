@@ -36,9 +36,15 @@ const DropZone = ({ onClick }: DropZoneProps) => {
         <span className="font-medium mb-1">
           Drag and drop an image, or click to select
         </span>
-        <span className="text-xs text-muted-foreground/80">
+        <span className="text-xs text-muted-foreground/80 mb-2">
           Take a clear photo of your food ingredients for best results
         </span>
+        <ul className="text-xs text-left list-disc pl-5 mt-2 text-muted-foreground/70">
+          <li>Use good lighting</li>
+          <li>Place ingredients on a clean surface</li>
+          <li>Separate ingredients so they're visible</li>
+          <li>Use high resolution photos</li>
+        </ul>
       </div>
     </div>
   );

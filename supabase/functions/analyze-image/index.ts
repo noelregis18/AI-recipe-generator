@@ -17,6 +17,7 @@ serve(async (req) => {
     // Get the OpenAI API key from environment variables
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
     if (!openaiApiKey) {
+      console.error('OpenAI API key not found');
       throw new Error('OpenAI API key not found');
     }
 
@@ -24,11 +25,13 @@ serve(async (req) => {
     const requestData = await req.json();
     const { imageBase64 } = requestData;
     if (!imageBase64) {
+      console.error('No image data provided');
       throw new Error('No image data provided');
     }
 
     // Check if the image is properly formatted
     if (!imageBase64.startsWith('data:image/')) {
+      console.error('Invalid image format');
       throw new Error('Invalid image format');
     }
 
@@ -92,7 +95,15 @@ serve(async (req) => {
     if (!response.ok) {
       const errorData = await response.text();
       console.error('OpenAI API error:', errorData);
-      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+      
+      // Check for specific error types
+      if (response.status === 429) {
+        throw new Error('API rate limit exceeded. Please try again later.');
+      } else if (errorData.includes('insufficient_quota')) {
+        throw new Error('OpenAI API quota exceeded. Please check your API key.');
+      } else {
+        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+      }
     }
 
     const data = await response.json();
@@ -156,7 +167,7 @@ serve(async (req) => {
         recipes: [{
           id: 'error-1',
           title: 'Could Not Process Image',
-          description: 'We encountered an issue analyzing your image. Please try again with a clearer photo of ingredients.',
+          description: error.message || 'We encountered an issue analyzing your image. Please try again with a clearer photo of ingredients.',
           cookTime: 'N/A',
           difficulty: 'N/A',
           ingredients: ['Please try again with a different image'],

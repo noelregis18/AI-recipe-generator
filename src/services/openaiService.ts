@@ -33,15 +33,21 @@ export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> 
     
     if (error) {
       console.error('Error calling analyze-image function:', error);
-      toast.error('Failed to analyze image. Please try again.');
-      return getFallbackRecipes('Service Error');
+      toast.error('Failed to analyze image: ' + (error.message || 'Unknown error'));
+      return getFallbackRecipes('Service Error: ' + error.message);
     }
     
     // Check if there's an error message in the response
     if (data.error) {
       console.error('Error from analyze-image function:', data.error);
-      toast.error(data.error);
-      return data.recipes || getFallbackRecipes('Processing Error');
+      
+      if (data.error.includes('API rate limit') || data.error.includes('quota exceeded')) {
+        toast.error('OpenAI API limit reached. Please try again later.');
+      } else {
+        toast.error(data.error || 'Error analyzing image');
+      }
+      
+      return data.recipes || getFallbackRecipes('Processing Error: ' + data.error);
     }
     
     // Map the API response to our Recipe type
@@ -75,9 +81,9 @@ export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> 
     return getFallbackRecipes('Invalid Format');
   } catch (error) {
     console.error('Error in analyzeImageAndGetRecipes:', error);
-    toast.error('Something went wrong. Please try again later.');
+    toast.error('Something went wrong: ' + (error.message || 'Please try again later.'));
     // Return fallback recipes in case of error
-    return getFallbackRecipes('Exception');
+    return getFallbackRecipes('Exception: ' + error.message);
   }
 };
 
