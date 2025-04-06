@@ -21,9 +21,15 @@ serve(async (req) => {
     }
 
     // Get the request data
-    const { imageBase64 } = await req.json();
+    const requestData = await req.json();
+    const { imageBase64 } = requestData;
     if (!imageBase64) {
       throw new Error('No image data provided');
+    }
+
+    // Check if the image is properly formatted
+    if (!imageBase64.startsWith('data:image/')) {
+      throw new Error('Invalid image format');
     }
 
     // Prepare the prompt for OpenAI
@@ -54,6 +60,8 @@ serve(async (req) => {
       Use ONLY the ingredients visible in the image. If some standard kitchen ingredients might be assumed to be available (salt, pepper, oil), you can include those.
     `;
 
+    console.log("Calling OpenAI API...");
+    
     // Call OpenAI API with the image
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
@@ -81,8 +89,14 @@ serve(async (req) => {
       })
     });
 
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('OpenAI API error:', errorData);
+      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+    }
+
     const data = await response.json();
-    console.log('OpenAI response:', JSON.stringify(data));
+    console.log('OpenAI response received');
 
     if (!data.choices || !data.choices[0]) {
       throw new Error('Invalid response from OpenAI');
@@ -92,7 +106,15 @@ serve(async (req) => {
     try {
       // Try to parse the response as JSON
       const content = data.choices[0].message.content;
-      recipes = JSON.parse(content);
+      console.log('Raw OpenAI content:', content);
+      
+      // Handle potential JSON parsing issues
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        recipes = JSON.parse(jsonMatch[0]);
+      } else {
+        throw new Error('Could not extract JSON from response');
+      }
     } catch (error) {
       console.error('Error parsing OpenAI response:', error);
       // Fall back to a more robust parsing approach or default recipes
@@ -104,7 +126,6 @@ serve(async (req) => {
         instructions: ['N/A'],
         difficulty: 'N/A',
         cookTime: 'N/A',
-        imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c'
       }];
     }
 
@@ -117,19 +138,34 @@ serve(async (req) => {
 
     recipes = recipes.map((recipe, index) => ({
       ...recipe,
+      id: recipe.id || `recipe-${index + 1}`,
       imageUrl: recipe.imageUrl || foodImages[index % foodImages.length]
     }));
+
+    console.log('Returning recipes:', recipes.length);
 
     return new Response(JSON.stringify({ recipes }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
 
   } catch (error) {
-    console.error('Error:', error);
+    console.error('Error in analyze-image function:', error);
     return new Response(
-      JSON.stringify({ error: error.message || 'An error occurred during the analysis' }),
+      JSON.stringify({ 
+        error: error.message || 'An error occurred during the analysis',
+        recipes: [{
+          id: 'error-1',
+          title: 'Could Not Process Image',
+          description: 'We encountered an issue analyzing your image. Please try again with a clearer photo of ingredients.',
+          cookTime: 'N/A',
+          difficulty: 'N/A',
+          ingredients: ['Please try again with a different image'],
+          instructions: ['Try taking the photo in better lighting', 'Ensure ingredients are clearly visible'],
+          imageUrl: 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c'
+        }]
+      }),
       { 
-        status: 500, 
+        status: 200, // Return 200 even on error, but include error message
         headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
       }
     );
