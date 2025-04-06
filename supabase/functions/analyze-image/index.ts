@@ -16,9 +16,12 @@ serve(async (req) => {
   try {
     // Get the OpenAI API key from environment variables
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    if (!openaiApiKey) {
-      console.error('OpenAI API key not found');
-      throw new Error('OpenAI API key not found');
+    // Get the DeepSeek API key from environment variables
+    const deepseekApiKey = "sk-8e0d4136792246f893f45a1ffbb8c5d1";
+    
+    if (!openaiApiKey && !deepseekApiKey) {
+      console.error('No API keys found');
+      throw new Error('No API keys available');
     }
 
     // Get the request data
@@ -115,7 +118,7 @@ serve(async (req) => {
       }
     ];
 
-    // Prepare the prompt for OpenAI
+    // Prepare the prompt for AI
     const prompt = `
       Analyze this image of food ingredients and suggest 3 recipes that can be made with them.
       For each recipe, include:
@@ -143,121 +146,184 @@ serve(async (req) => {
       Use ONLY the ingredients visible in the image. If some standard kitchen ingredients might be assumed to be available (salt, pepper, oil), you can include those.
     `;
 
-    console.log("Calling OpenAI API...");
+    console.log("Starting AI processing...");
     
-    try {
-      // Call OpenAI API with the image
-      const response = await fetch('https://api.openai.com/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${openaiApiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'gpt-4o',
-          messages: [
-            {
-              role: 'user',
-              content: [
-                { type: 'text', text: prompt },
-                { 
-                  type: 'image_url', 
-                  image_url: {
-                    url: imageBase64,
-                  }
-                }
-              ]
-            }
-          ],
-          max_tokens: 2000,
-        })
-      });
-
-      // Check for specific API limit errors
-      if (!response.ok) {
-        const errorData = await response.text();
-        console.error('OpenAI API error:', errorData);
-        
-        // Check if it's a rate limit error
-        if (response.status === 429 || errorData.includes('rate_limit') || errorData.includes('insufficient_quota')) {
-          console.log('Using mock recipes due to API rate limits');
-          // Return mock recipes with an explicit message about the API limit
-          return new Response(
-            JSON.stringify({ 
-              recipes: mockRecipes,
-              notice: "Using demo recipes - API rate limit reached"
-            }),
-            { 
-              status: 200,
-              headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-            }
-          );
-        } else {
-          throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
-        }
-      }
-
-      const data = await response.json();
-      console.log('OpenAI response received');
-
-      if (!data.choices || !data.choices[0]) {
-        throw new Error('Invalid response from OpenAI');
-      }
-
-      let recipes;
+    // Try OpenAI first if API key is available
+    let recipes = null;
+    let usedAPI = "";
+    let apiError = null;
+    
+    // Try OpenAI if key is available
+    if (openaiApiKey) {
       try {
-        // Try to parse the response as JSON
-        const content = data.choices[0].message.content;
-        console.log('Raw OpenAI content:', content);
-        
-        // Handle potential JSON parsing issues
-        const jsonMatch = content.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          recipes = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error('Could not extract JSON from response');
+        console.log("Attempting OpenAI API call...");
+        // Call OpenAI API with the image
+        const response = await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${openaiApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'gpt-4o',
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: prompt },
+                  { 
+                    type: 'image_url', 
+                    image_url: {
+                      url: imageBase64,
+                    }
+                  }
+                ]
+              }
+            ],
+            max_tokens: 2000,
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error('OpenAI API error:', errorData);
+          
+          if (response.status === 429 || errorData.includes('rate_limit') || errorData.includes('insufficient_quota')) {
+            console.log('OpenAI API rate limit reached, trying DeepSeek...');
+            throw new Error('OpenAI API rate limit reached');
+          } else {
+            throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+          }
         }
-      } catch (error) {
-        console.error('Error parsing OpenAI response:', error);
-        // Fall back to mock recipes
-        console.log('Falling back to mock recipes due to parsing error');
-        recipes = mockRecipes;
+
+        const data = await response.json();
+        console.log('OpenAI response received');
+
+        if (!data.choices || !data.choices[0]) {
+          throw new Error('Invalid response from OpenAI');
+        }
+
+        try {
+          // Try to parse the response as JSON
+          const content = data.choices[0].message.content;
+          console.log('Raw OpenAI content:', content);
+          
+          // Handle potential JSON parsing issues
+          const jsonMatch = content.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            recipes = JSON.parse(jsonMatch[0]);
+            usedAPI = "OpenAI";
+          } else {
+            throw new Error('Could not extract JSON from response');
+          }
+        } catch (parseError) {
+          console.error('Error parsing OpenAI response:', parseError);
+          throw parseError;
+        }
+      } catch (openaiError) {
+        console.error('Error with OpenAI API:', openaiError);
+        apiError = openaiError;
+        // We'll try DeepSeek next
       }
-
-      // Add default image URLs if not provided
-      const foodImages = [
-        'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',
-        'https://images.unsplash.com/photo-1563379926898-05f4575a45d8',
-        'https://images.unsplash.com/photo-1505576399279-565b52d4ac71'
-      ];
-
-      recipes = recipes.map((recipe, index) => ({
-        ...recipe,
-        id: recipe.id || `recipe-${index + 1}`,
-        imageUrl: recipe.imageUrl || foodImages[index % foodImages.length]
-      }));
-
-      console.log('Returning recipes:', recipes.length);
-
-      return new Response(JSON.stringify({ recipes }), {
-        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
-      });
-    } catch (apiError) {
-      console.error('Error with OpenAI API call:', apiError);
-      console.log('Falling back to mock recipes due to API error');
-      
-      // Return mock recipes when OpenAI API fails
-      return new Response(
-        JSON.stringify({ 
-          recipes: mockRecipes,
-          notice: "Using demo recipes - API unavailable"
-        }),
-        { 
-          status: 200,
-          headers: { ...corsHeaders, 'Content-Type': 'application/json' } 
-        }
-      );
     }
+    
+    // If OpenAI failed or is not available, try DeepSeek
+    if (!recipes && deepseekApiKey) {
+      try {
+        console.log("Attempting DeepSeek API call...");
+        
+        // Call DeepSeek API with the image using their vision model
+        const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${deepseekApiKey}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'deepseek-chat',
+            messages: [
+              {
+                role: 'user',
+                content: [
+                  { type: 'text', text: prompt },
+                  { 
+                    type: 'image_url', 
+                    image_url: imageBase64
+                  }
+                ]
+              }
+            ],
+            max_tokens: 2000,
+          })
+        });
+
+        if (!response.ok) {
+          const errorData = await response.text();
+          console.error('DeepSeek API error:', errorData);
+          throw new Error(`DeepSeek API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        console.log('DeepSeek response received');
+
+        if (!data.choices || !data.choices[0]) {
+          throw new Error('Invalid response from DeepSeek');
+        }
+
+        try {
+          // Try to parse the response as JSON
+          const content = data.choices[0].message.content;
+          console.log('Raw DeepSeek content:', content);
+          
+          // Handle potential JSON parsing issues
+          const jsonMatch = content.match(/\[[\s\S]*\]/);
+          if (jsonMatch) {
+            recipes = JSON.parse(jsonMatch[0]);
+            usedAPI = "DeepSeek";
+          } else {
+            throw new Error('Could not extract JSON from DeepSeek response');
+          }
+        } catch (parseError) {
+          console.error('Error parsing DeepSeek response:', parseError);
+          throw parseError;
+        }
+      } catch (deepseekError) {
+        console.error('Error with DeepSeek API:', deepseekError);
+        // If both APIs failed, we'll use mockRecipes
+        // If OpenAI failed first, use that error for better context
+        apiError = apiError || deepseekError;
+      }
+    }
+    
+    // If both APIs failed or no keys available, fall back to mock recipes
+    if (!recipes) {
+      console.log('All API attempts failed, using mock recipes');
+      recipes = mockRecipes;
+      usedAPI = "Demo";
+    }
+
+    // Add default image URLs if not provided
+    const foodImages = [
+      'https://images.unsplash.com/photo-1546069901-ba9599a7e63c',
+      'https://images.unsplash.com/photo-1563379926898-05f4575a45d8',
+      'https://images.unsplash.com/photo-1505576399279-565b52d4ac71'
+    ];
+
+    recipes = recipes.map((recipe, index) => ({
+      ...recipe,
+      id: recipe.id || `recipe-${index + 1}`,
+      imageUrl: recipe.imageUrl || foodImages[index % foodImages.length]
+    }));
+
+    console.log('Returning recipes:', recipes.length, 'using API:', usedAPI);
+
+    return new Response(JSON.stringify({ 
+      recipes,
+      apiUsed: usedAPI,
+      notice: usedAPI === "Demo" ? "Using demo recipes - API unavailable" : null
+    }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
   } catch (error) {
     console.error('Error in analyze-image function:', error);
     // Return a helpful error message but with fallback recipes

@@ -49,7 +49,7 @@ const DropZone = ({ onClick }: DropZoneProps) => {
         <div className="mt-4 p-2 bg-blue-50 rounded-md flex items-start gap-2 text-xs text-blue-700">
           <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
           <p className="text-left">
-            If API limits are reached, demo recipes will be shown instead of analyzing your image.
+            We use multiple AI services to analyze your image. If one service reaches its limit, we'll automatically try another.
           </p>
         </div>
       </div>

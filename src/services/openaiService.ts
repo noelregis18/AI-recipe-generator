@@ -37,6 +37,13 @@ export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> 
       return getFallbackRecipes('Service Error: ' + error.message);
     }
     
+    // Check which API was used
+    if (data.apiUsed === "Demo") {
+      toast.warning('Using demo recipes - API rate limit reached. These are example recipes, not based on your image.');
+    } else if (data.apiUsed === "DeepSeek") {
+      toast.success(`Analysis completed using DeepSeek AI!`);
+    }
+    
     // Check if there's a notice about demo recipes being used due to API limits
     if (data.notice && data.notice.includes('API rate limit')) {
       toast.warning('Using demo recipes - API rate limit reached. These are example recipes, not based on your image.');
@@ -47,7 +54,7 @@ export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> 
       console.error('Error from analyze-image function:', data.error);
       
       if (data.error.includes('API rate limit') || data.error.includes('quota exceeded')) {
-        toast.warning('OpenAI API limit reached. Using demo recipes instead.');
+        toast.warning('API limit reached. Using alternative AI service or demo recipes.');
       } else {
         toast.error(data.error || 'Error analyzing image');
       }
@@ -69,7 +76,8 @@ export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> 
         // If we're using demo recipes, show a different message
         toast.success(`Showing ${data.recipes.length} demo recipes (API limit reached)`);
       } else {
-        toast.success(`Found ${data.recipes.length} recipes for your ingredients!`);
+        const apiName = data.apiUsed || "AI";
+        toast.success(`Found ${data.recipes.length} recipes for your ingredients using ${apiName}!`);
       }
       
       return data.recipes.map((recipe: any, index: number) => ({
