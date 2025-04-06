@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { ImageIcon } from "lucide-react";
+import { ImageIcon, Info } from "lucide-react";
 
 interface DropZoneProps {
   onClick: () => void;
@@ -25,7 +25,7 @@ const DropZone = ({ onClick }: DropZoneProps) => {
   
   return (
     <div 
-      className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer flex flex-col items-center justify-center min-h-[200px]"
+      className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center hover:border-primary transition-colors cursor-pointer flex flex-col items-center justify-center min-h-[220px]"
       onClick={onClick}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
@@ -45,6 +45,13 @@ const DropZone = ({ onClick }: DropZoneProps) => {
           <li>Separate ingredients so they're visible</li>
           <li>Use high resolution photos</li>
         </ul>
+        
+        <div className="mt-4 p-2 bg-blue-50 rounded-md flex items-start gap-2 text-xs text-blue-700">
+          <Info className="h-4 w-4 flex-shrink-0 mt-0.5" />
+          <p className="text-left">
+            If API limits are reached, demo recipes will be shown instead of analyzing your image.
+          </p>
+        </div>
       </div>
     </div>
   );

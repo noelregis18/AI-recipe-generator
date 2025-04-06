@@ -37,12 +37,17 @@ export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> 
       return getFallbackRecipes('Service Error: ' + error.message);
     }
     
+    // Check if there's a notice about demo recipes being used due to API limits
+    if (data.notice && data.notice.includes('API rate limit')) {
+      toast.warning('Using demo recipes - API rate limit reached. These are example recipes, not based on your image.');
+    }
+    
     // Check if there's an error message in the response
     if (data.error) {
       console.error('Error from analyze-image function:', data.error);
       
       if (data.error.includes('API rate limit') || data.error.includes('quota exceeded')) {
-        toast.error('OpenAI API limit reached. Please try again later.');
+        toast.warning('OpenAI API limit reached. Using demo recipes instead.');
       } else {
         toast.error(data.error || 'Error analyzing image');
       }
@@ -60,6 +65,9 @@ export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> 
       // Check if first recipe is an error recipe
       if (data.recipes[0].title.includes('Error') || data.recipes[0].title.includes('Could Not Process')) {
         toast.warning('We had trouble identifying ingredients. Try a clearer photo.');
+      } else if (data.notice) {
+        // If we're using demo recipes, show a different message
+        toast.success(`Showing ${data.recipes.length} demo recipes (API limit reached)`);
       } else {
         toast.success(`Found ${data.recipes.length} recipes for your ingredients!`);
       }
