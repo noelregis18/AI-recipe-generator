@@ -34,63 +34,68 @@ export const buildAIPrompt = () => `
 export async function callOpenAIAPI(imageBase64: string, apiKey: string) {
   console.log("Attempting OpenAI API call...");
   
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: buildAIPrompt() },
-            { 
-              type: 'image_url', 
-              image_url: {
-                url: imageBase64,
+  try {
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o',
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: buildAIPrompt() },
+              { 
+                type: 'image_url', 
+                image_url: {
+                  url: imageBase64,
+                }
               }
-            }
-          ]
-        }
-      ],
-      max_tokens: 2000,
-    })
-  });
+            ]
+          }
+        ],
+        max_tokens: 2000,
+      })
+    });
 
-  if (!response.ok) {
-    const errorData = await response.text();
-    console.error('OpenAI API error:', errorData);
-    
-    if (response.status === 429 || errorData.includes('rate_limit') || errorData.includes('insufficient_quota')) {
-      throw new Error('OpenAI API rate limit reached');
-    } else {
-      throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('OpenAI API error:', errorData);
+      
+      if (response.status === 429 || errorData.includes('rate_limit') || errorData.includes('insufficient_quota')) {
+        throw new Error('OpenAI API rate limit reached');
+      } else {
+        throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
+      }
     }
-  }
 
-  const data = await response.json();
-  console.log('OpenAI response received');
+    const data = await response.json();
+    console.log('OpenAI response received');
 
-  if (!data.choices || !data.choices[0]) {
-    throw new Error('Invalid response from OpenAI');
-  }
+    if (!data.choices || !data.choices[0]) {
+      throw new Error('Invalid response from OpenAI');
+    }
 
-  // Try to parse the response as JSON
-  const content = data.choices[0].message.content;
-  console.log('Raw OpenAI content:', content);
-  
-  // Handle potential JSON parsing issues
-  const jsonMatch = content.match(/\[[\s\S]*\]/);
-  if (jsonMatch) {
-    return {
-      recipes: JSON.parse(jsonMatch[0]),
-      apiUsed: "OpenAI"
-    };
-  } else {
-    throw new Error('Could not extract JSON from response');
+    // Try to parse the response as JSON
+    const content = data.choices[0].message.content;
+    console.log('Raw OpenAI content:', content);
+    
+    // Handle potential JSON parsing issues
+    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      return {
+        recipes: JSON.parse(jsonMatch[0]),
+        apiUsed: "OpenAI"
+      };
+    } else {
+      throw new Error('Could not extract JSON from response');
+    }
+  } catch (error) {
+    console.error('Error in callOpenAIAPI:', error);
+    throw error;
   }
 }
 
@@ -98,56 +103,62 @@ export async function callOpenAIAPI(imageBase64: string, apiKey: string) {
 export async function callDeepSeekAPI(imageBase64: string, apiKey: string) {
   console.log("Attempting DeepSeek API call...");
   
-  const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Authorization': `Bearer ${apiKey}`,
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify({
-      model: 'deepseek-chat',
-      messages: [
-        {
-          role: 'user',
-          content: [
-            { type: 'text', text: buildAIPrompt() },
-            { 
-              type: 'image_url', 
-              image_url: imageBase64
-            }
-          ]
-        }
-      ],
-      max_tokens: 2000,
-    })
-  });
+  try {
+    // DeepSeek API format is different - it expects differently structured content
+    const response = await fetch('https://api.deepseek.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'deepseek-vision',  // Make sure to use a vision-capable model
+        messages: [
+          {
+            role: 'user',
+            content: [
+              { type: 'text', text: buildAIPrompt() },
+              { 
+                type: 'image', 
+                image_url: { url: imageBase64 }
+              }
+            ]
+          }
+        ],
+        max_tokens: 2000,
+      })
+    });
 
-  if (!response.ok) {
-    const errorData = await response.text();
-    console.error('DeepSeek API error:', errorData);
-    throw new Error(`DeepSeek API error: ${response.status} ${response.statusText}`);
-  }
+    if (!response.ok) {
+      const errorData = await response.text();
+      console.error('DeepSeek API error:', errorData);
+      throw new Error(`DeepSeek API error: ${response.status} ${response.statusText}`);
+    }
 
-  const data = await response.json();
-  console.log('DeepSeek response received');
+    const data = await response.json();
+    console.log('DeepSeek response received');
 
-  if (!data.choices || !data.choices[0]) {
-    throw new Error('Invalid response from DeepSeek');
-  }
+    if (!data.choices || !data.choices[0]) {
+      throw new Error('Invalid response from DeepSeek');
+    }
 
-  // Try to parse the response as JSON
-  const content = data.choices[0].message.content;
-  console.log('Raw DeepSeek content:', content);
-  
-  // Handle potential JSON parsing issues
-  const jsonMatch = content.match(/\[[\s\S]*\]/);
-  if (jsonMatch) {
-    return {
-      recipes: JSON.parse(jsonMatch[0]),
-      apiUsed: "DeepSeek"
-    };
-  } else {
-    throw new Error('Could not extract JSON from DeepSeek response');
+    // Try to parse the response as JSON
+    const content = data.choices[0].message.content;
+    console.log('Raw DeepSeek content:', content);
+    
+    // Handle potential JSON parsing issues
+    const jsonMatch = content.match(/\[[\s\S]*\]/);
+    if (jsonMatch) {
+      return {
+        recipes: JSON.parse(jsonMatch[0]),
+        apiUsed: "DeepSeek"
+      };
+    } else {
+      throw new Error('Could not extract JSON from DeepSeek response');
+    }
+  } catch (error) {
+    console.error('Error in callDeepSeekAPI:', error);
+    throw error;
   }
 }
 

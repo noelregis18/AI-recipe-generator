@@ -37,16 +37,20 @@ export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> 
       return getFallbackRecipes('Service Error: ' + error.message);
     }
     
+    console.log('AI Response:', data);
+    
     // Check which API was used
     if (data.apiUsed === "Demo") {
       toast.warning('Using demo recipes - API rate limit reached. These are example recipes, not based on your image.');
     } else if (data.apiUsed === "DeepSeek") {
       toast.success(`Analysis completed using DeepSeek AI!`);
+    } else if (data.apiUsed === "OpenAI") {
+      toast.success(`Analysis completed using OpenAI!`);
     }
     
     // Check if there's a notice about demo recipes being used due to API limits
-    if (data.notice && data.notice.includes('API rate limit')) {
-      toast.warning('Using demo recipes - API rate limit reached. These are example recipes, not based on your image.');
+    if (data.notice) {
+      toast.warning(data.notice);
     }
     
     // Check if there's an error message in the response
@@ -59,7 +63,11 @@ export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> 
         toast.error(data.error || 'Error analyzing image');
       }
       
-      return data.recipes || getFallbackRecipes('Processing Error: ' + data.error);
+      if (data.recipes && Array.isArray(data.recipes) && data.recipes.length > 0) {
+        return mapRecipes(data.recipes);
+      }
+      
+      return getFallbackRecipes('Processing Error: ' + data.error);
     }
     
     // Map the API response to our Recipe type
@@ -70,7 +78,7 @@ export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> 
       }
       
       // Check if first recipe is an error recipe
-      if (data.recipes[0].title.includes('Error') || data.recipes[0].title.includes('Could Not Process')) {
+      if (data.recipes[0].title?.includes('Error') || data.recipes[0].title?.includes('Could Not Process')) {
         toast.warning('We had trouble identifying ingredients. Try a clearer photo.');
       } else if (data.notice) {
         // If we're using demo recipes, show a different message
@@ -80,16 +88,7 @@ export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> 
         toast.success(`Found ${data.recipes.length} recipes for your ingredients using ${apiName}!`);
       }
       
-      return data.recipes.map((recipe: any, index: number) => ({
-        id: recipe.id || `recipe-${index + 1}`,
-        title: recipe.title,
-        description: recipe.description || '',
-        cookTime: recipe.cookTime || recipe.cook_time || '30 minutes',
-        difficulty: recipe.difficulty || 'Medium',
-        ingredients: recipe.ingredients || [],
-        instructions: recipe.instructions || [],
-        imageUrl: recipe.imageUrl || recipe.image_url || getFallbackImageUrl(index)
-      }));
+      return mapRecipes(data.recipes);
     }
     
     // Fallback in case of unexpected API response format
@@ -101,6 +100,20 @@ export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> 
     // Return fallback recipes in case of error
     return getFallbackRecipes('Exception: ' + error.message);
   }
+};
+
+// Helper function to map API recipes to our Recipe type
+const mapRecipes = (apiRecipes: any[]): Recipe[] => {
+  return apiRecipes.map((recipe: any, index: number) => ({
+    id: recipe.id || `recipe-${index + 1}`,
+    title: recipe.title,
+    description: recipe.description || '',
+    cookTime: recipe.cookTime || recipe.cook_time || '30 minutes',
+    difficulty: recipe.difficulty || 'Medium',
+    ingredients: recipe.ingredients || [],
+    instructions: recipe.instructions || [],
+    imageUrl: recipe.imageUrl || recipe.image_url || getFallbackImageUrl(index)
+  }));
 };
 
 // Helper function to get a fallback image URL

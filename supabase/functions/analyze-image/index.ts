@@ -10,6 +10,7 @@ serve(async (req) => {
   }
 
   try {
+    console.log("Received analyze-image request");
     return await handleImageAnalysis(req);
   } catch (error) {
     console.error('Error in analyze-image function:', error);
