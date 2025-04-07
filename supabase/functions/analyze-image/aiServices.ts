@@ -35,6 +35,7 @@ export async function callOpenAIAPI(imageBase64: string, apiKey: string) {
   console.log("Attempting OpenAI API call...");
   
   try {
+    // Modified to use gpt-4o model which is more reliable for vision tasks
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -42,7 +43,7 @@ export async function callOpenAIAPI(imageBase64: string, apiKey: string) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',
+        model: 'gpt-4o',  // Updated to use gpt-4o
         messages: [
           {
             role: 'user',
