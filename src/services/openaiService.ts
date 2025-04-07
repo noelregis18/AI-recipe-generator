@@ -23,7 +23,8 @@ export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> 
     reader.readAsDataURL(image);
     const imageBase64 = await imageBase64Promise;
     
-    // Call the Supabase Edge Function
+    // Call the Supabase Edge Function with additional logging
+    console.log('Calling analyze-image function...');
     const { data, error } = await supabase.functions.invoke('analyze-image', {
       body: { imageBase64 }
     });
@@ -37,11 +38,11 @@ export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> 
       return getFallbackRecipes('Service Error: ' + error.message);
     }
     
-    console.log('AI Response:', data);
+    console.log('AI Response Data:', data);
     
-    // Check which API was used
+    // Check which API was used and show appropriate toast
     if (data.apiUsed === "Demo") {
-      toast.warning('Using demo recipes - API rate limit reached. These are example recipes, not based on your image.');
+      toast.warning('Using demo recipes - API unavailable. These are example recipes, not based on your image.');
     } else if (data.apiUsed === "DeepSeek") {
       toast.success(`Analysis completed using DeepSeek AI!`);
     } else if (data.apiUsed === "OpenAI") {
@@ -50,6 +51,7 @@ export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> 
     
     // Check if there's a notice about demo recipes being used due to API limits
     if (data.notice) {
+      console.warn('API Notice:', data.notice);
       toast.warning(data.notice);
     }
     
@@ -57,8 +59,8 @@ export const analyzeImageAndGetRecipes = async (image: File): Promise<Recipe[]> 
     if (data.error) {
       console.error('Error from analyze-image function:', data.error);
       
-      if (data.error.includes('API rate limit') || data.error.includes('quota exceeded')) {
-        toast.warning('API limit reached. Using alternative AI service or demo recipes.');
+      if (data.error.includes('API rate limit') || data.error.includes('quota exceeded') || data.error.includes('authentication error')) {
+        toast.warning('API limit reached or authentication error. Using alternative AI service or demo recipes.');
       } else {
         toast.error(data.error || 'Error analyzing image');
       }

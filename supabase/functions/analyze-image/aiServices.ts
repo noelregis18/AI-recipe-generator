@@ -35,7 +35,7 @@ export async function callOpenAIAPI(imageBase64: string, apiKey: string) {
   console.log("Attempting OpenAI API call...");
   
   try {
-    // Modified to use gpt-4o model which is more reliable for vision tasks
+    // Using gpt-4o-mini which should work with the API key and have lower quota impact
     const response = await fetch('https://api.openai.com/v1/chat/completions', {
       method: 'POST',
       headers: {
@@ -43,7 +43,7 @@ export async function callOpenAIAPI(imageBase64: string, apiKey: string) {
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        model: 'gpt-4o',  // Updated to use gpt-4o
+        model: 'gpt-4o-mini',  // Using more cost-effective model with vision capabilities
         messages: [
           {
             role: 'user',
@@ -62,19 +62,23 @@ export async function callOpenAIAPI(imageBase64: string, apiKey: string) {
       })
     });
 
+    // Improved error handling
     if (!response.ok) {
       const errorData = await response.text();
-      console.error('OpenAI API error:', errorData);
+      console.error('OpenAI API error response:', errorData);
       
+      // Check specific error conditions
       if (response.status === 429 || errorData.includes('rate_limit') || errorData.includes('insufficient_quota')) {
-        throw new Error('OpenAI API rate limit reached');
+        throw new Error('OpenAI API rate limit or quota reached');
+      } else if (response.status === 401) {
+        throw new Error('OpenAI API authentication error - invalid API key format');
       } else {
         throw new Error(`OpenAI API error: ${response.status} ${response.statusText}`);
       }
     }
 
     const data = await response.json();
-    console.log('OpenAI response received');
+    console.log('OpenAI response received successfully');
 
     if (!data.choices || !data.choices[0]) {
       throw new Error('Invalid response from OpenAI');
@@ -85,14 +89,20 @@ export async function callOpenAIAPI(imageBase64: string, apiKey: string) {
     console.log('Raw OpenAI content:', content);
     
     // Handle potential JSON parsing issues
-    const jsonMatch = content.match(/\[[\s\S]*\]/);
-    if (jsonMatch) {
-      return {
-        recipes: JSON.parse(jsonMatch[0]),
-        apiUsed: "OpenAI"
-      };
-    } else {
-      throw new Error('Could not extract JSON from response');
+    try {
+      const jsonMatch = content.match(/\[[\s\S]*\]/);
+      if (jsonMatch) {
+        return {
+          recipes: JSON.parse(jsonMatch[0]),
+          apiUsed: "OpenAI"
+        };
+      } else {
+        console.error('Could not extract JSON from response');
+        throw new Error('Could not extract JSON from response');
+      }
+    } catch (jsonError) {
+      console.error('JSON parsing error:', jsonError);
+      throw new Error('Failed to parse JSON from API response');
     }
   } catch (error) {
     console.error('Error in callOpenAIAPI:', error);
