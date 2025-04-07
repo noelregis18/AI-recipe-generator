@@ -1,4 +1,3 @@
-
 import { corsHeaders } from "./cors.ts";
 import { mockRecipes } from "./mockRecipes.ts";
 import { 
@@ -12,8 +11,8 @@ export async function handleImageAnalysis(req: Request) {
   try {
     // Get the OpenAI API key from environment variables
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    // Get the DeepSeek API key - using a new API key
-    const deepseekApiKey = "sk-ZXbsIIHlyIGLbP3Ryfxhb2k4QnZZKGHsLG3aHkTf8QyH1pMZ";
+    // Get the DeepSeek API key - using new API key
+    const deepseekApiKey = "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";
     
     if (!openaiApiKey && !deepseekApiKey) {
       console.error('No API keys found');
