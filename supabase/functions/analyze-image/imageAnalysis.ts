@@ -12,8 +12,8 @@ export async function handleImageAnalysis(req: Request) {
   try {
     // Get the OpenAI API key from environment variables
     const openaiApiKey = Deno.env.get('OPENAI_API_KEY');
-    // Get the DeepSeek API key from environment variables
-    const deepseekApiKey = "sk-8e0d4136792246f893f45a1ffbb8c5d1";
+    // Get the DeepSeek API key - using a new API key
+    const deepseekApiKey = "sk-ZXbsIIHlyIGLbP3Ryfxhb2k4QnZZKGHsLG3aHkTf8QyH1pMZ";
     
     if (!openaiApiKey && !deepseekApiKey) {
       console.error('No API keys found');
